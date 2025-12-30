@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ================================
-#  Debian 11 XRDP + XFCE Installer
+#  Ubuntu 24.04 XRDP + XFCE Installer
 #  Made by MahimOp
 # ================================
 
@@ -17,6 +17,12 @@ RESET='\033[0m'
 log()  { echo -e "${CYAN}[INFO]${RESET} $1"; }
 ok()   { echo -e "${GREEN}[OK]${RESET}   $1"; }
 warn() { echo -e "${YELLOW}[WARN]${RESET} $1"; }
+
+# -------- OS Check (Ubuntu 24.04 only) --------
+if ! grep -q "Ubuntu 24.04" /etc/os-release; then
+    echo -e "${RED}❌ This script only supports Ubuntu 24.04 (Noble Numbat).${RESET}"
+    exit 1
+fi
 
 # -------- Sudo Detection (IDX safe) --------
 if command -v sudo >/dev/null 2>&1; then
@@ -40,7 +46,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ |  $$ |$$$$$$\ $$ | \_/ $$ |
 \__|     \__|\__|  \__|\__|  \__|\______|\__|     \__|
 
 --------------------------------------------------------
-   Debian 11 XRDP + XFCE Setup
+   Ubuntu 24.04 XRDP + XFCE Setup
    Clean • Fast • Stable • Google IDX Ready
    Made with ❤️  by MahimOp
 ========================================================
@@ -59,7 +65,7 @@ $SUDO apt install -y \
     xfce4-goodies \
     xrdp \
     dbus-x11 \
-    firefox-esr
+    firefox
 ok "Desktop environment installed"
 
 # -------- Step 3 --------
@@ -89,16 +95,21 @@ ok "XRDP service running"
 
 # -------- Step 7 --------
 log "[7/8] Applying Firefox XRDP fix..."
+# Create local desktop file override to avoid modifying system-wide file
+mkdir -p ~/.local/share/applications
+cp /usr/share/applications/org.mozilla.firefox.desktop ~/.local/share/applications/
 $SUDO sed -i \
-'s|^Exec=firefox-esr.*|Exec=firefox-esr --no-sandbox --disable-seccomp|' \
-/usr/share/applications/firefox-esr.desktop
-ok "Firefox XRDP fix applied"
+'s|^Exec=firefox.*|Exec=firefox --no-sandbox --disable-seccomp|' \
+~/.local/share/applications/org.mozilla.firefox.desktop
+ok "Firefox XRDP fix applied (user-local)"
 
 # -------- Step 8 --------
 log "[8/8] Final service check..."
-systemctl is-active xrdp >/dev/null 2>&1 \
-    && ok "XRDP is active" \
-    || warn "XRDP may not be running"
+if systemctl is-active --quiet xrdp; then
+    ok "XRDP is active"
+else
+    warn "XRDP may not be running"
+fi
 
 # -------- Done --------
 echo
